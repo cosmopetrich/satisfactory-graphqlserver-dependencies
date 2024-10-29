@@ -1,0 +1,161 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths: "*/vcpkg.json"
+  push:
+    branches: [master]
+    paths: "*/vcpkg.json"
+    
+permissions:
+  contents: write 
+
+env:
+  # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+jobs:
+  build:
+    name: Build
+    strategy:
+      fail-fast: true
+      matrix:
+        platform: [Linux, Win64]
+        dependency: [cppgraphqlgen, uwebsockets]
+        include:
+          - platform: Linux
+            triplet-release: x64-linux-release
+            os: ubuntu-latest
+            vcpkg: vcpkg
+            vcpkg-bootstrap: ./bootstrap-vcpkg.sh
+          - platform: Win64
+            triplet-release: x64-windows-static-md-release
+            os: windows-latest
+            vcpkg: vcpkg.exe
+            vcpkg-bootstrap: bootstrap-vcpkg.bat
+          - dependency: cppgraphqlgen
+            artifact-paths: |
+              vcpkg/vcpkg_installed/*/tools/cppgraphqlgen/schemagen*
+              vcpkg/vcpkg_installed/*/include/graphqlservice
+              !vcpkg/vcpkg_installed/*/include/graphqlservice/GraphQLClient.h
+              vcpkg/vcpkg_installed/*/lib/*graphql*
+              !vcpkg/vcpkg_installed/*/lib/*graphqlclient*
+          - dependency: uwebsockets
+            artifact-paths: |
+              vcpkg/vcpkg_installed/*/include/uwebsockets
+              vcpkg/vcpkg_installed/*/lib/*
+              !vcpkg/vcpkg_installed/*/lib/pkgconfig
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout vcpkg
+        uses: actions/checkout@v4
+        with:
+          path: vcpkg
+          fetch-depth: 0
+          repository: microsoft/vcpkg
+      - name: Checkout vcpkg.json
+        uses: actions/checkout@v4
+        with:
+          path: config
+          sparse-checkout: "${{ matrix.dependency }}/vcpkg.json"
+      - name: Install vcpkg.json
+        run: mv "config/${{ matrix.dependency }}/vcpkg.json" vcpkg/
+      - name: Configure caching
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+      - name: Bootstrap vcpkg
+        run: ${{ matrix.vcpkg-bootstrap }}
+        working-directory: vcpkg
+      - name: Run vcpkg
+        run: ${{ matrix.vcpkg }} install --triplet ${{ matrix.triplet-release }}
+        working-directory: vcpkg
+      - name: Upload artifacts
+        if: ${{ github.ref == 'refs/heads/master' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.dependency }}-${{ matrix.platform }}
+          path: ${{ matrix.artifact-paths }}
+          if-no-files-found: error
+  push:
+    if: ${{ github.ref == 'refs/heads/master' }}
+    name: Push
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: repo
+      - name: Retrieve artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create release directory
+        run: mkdir -p release
+      - name: Determine release info
+        id: release-info
+        run: |
+          echo "name=$(date -u '+%Y.%m.%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+          echo "notes=$(git show -s --format=%s)" >> "$GITHUB_OUTPUT"
+        working-directory: repo
+      - name: Create tools archive
+        run: |
+          mkdir -p release/tools
+          mv artifacts/*/*/tools/*/* release/tools/
+          echo ${{ steps.release-info.outputs.name }} > release/tools/.VERSION
+          cd release/tools
+          zip -r "../tools.zip" * .VERSION
+      - name: Add headers to git
+        run: |
+          for depPkg in */vcpkg.json; do
+            dep="$(dirname ${depPkg})"
+            incDir="${dep}/include"
+            rm -rf "${incDir}"
+            mkdir -p "${incDir}"
+            mv "../artifacts/${dep}-Win64"/*/include/* "${incDir}"
+            git add "${incDir}"
+          done
+          echo ${{ steps.release-info.outputs.name }} > ".VERSION"
+          git add .VERSION
+        working-directory: repo
+      - name: Create libs archives
+        run: |
+          for depPkg in */vcpkg.json; do
+            dep="$(dirname ${depPkg})"
+            depDir="../release/${dep}" 
+            for plat in Linux Win64; do
+              platDir="${depDir}/${plat}"
+              mkdir -p "${platDir}"
+              mv "../artifacts/${dep}-${plat}"/*/lib/* "${platDir}"
+            done
+            cd "${depDir}"
+            echo ${{ steps.release-info.outputs.name }} > .VERSION
+            zip -r "../lib-${dep}.zip" * .VERSION
+            cd -
+          done
+        working-directory: repo
+      - name: Commit changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git diff-index --quiet HEAD || git commit --all --message "GHA build ${{ github.run_id }}-${{ github.run_attempt }}"
+        working-directory: repo
+      - name: Push
+        run: git push
+        working-directory: repo
+      - name: Create release
+        run: |
+          gh release create --draft --notes "${{ steps.release-info.outputs.notes }}" --target "${{ github.sha }}" \
+          --title "${{ steps.release-info.outputs.name }}" --repo "${{ github.repository }}" "${{ steps.release-info.outputs.name }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: repo
+      - name: Upload to release
+        run: gh release upload ${{ steps.release-info.outputs.name }} --repo ${{ github.repository }} release/*.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
