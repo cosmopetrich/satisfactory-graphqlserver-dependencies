@@ -1,0 +1,160 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths: vcpkg.json
+  push:
+    branches: [master]
+    paths: vcpkg.json
+    
+permissions:
+  contents: write 
+
+env:
+  # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+jobs:
+  build:
+    name: Build
+    strategy:
+      fail-fast: true
+      matrix:
+        triplet: [x64-linux, x64-windows-static]
+        include:
+          - triplet: x64-linux
+            artifact: Linux
+            os: ubuntu-latest
+            vcpkg: vcpkg
+            vcpkg-bootstrap: ./bootstrap-vcpkg.sh
+            schemagen: schemagen
+          - triplet: x64-windows-static
+            artifact: Win64
+            headers: true
+            os: windows-latest
+            vcpkg: vcpkg.exe
+            vcpkg-bootstrap: bootstrap-vcpkg.bat
+            schemagen: schemagen.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout vcpkg
+        uses: actions/checkout@v4
+        with:
+          path: vcpkg
+          fetch-depth: 0
+          repository: microsoft/vcpkg
+      - name: Checkout vcpkg.json
+        uses: actions/checkout@v4
+        with:
+          path: config
+          sparse-checkout: vcpkg.json
+      - name: Install vcpkg.json
+        run: mv config/vcpkg.json vcpkg/
+      - name: Configure caching
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+      - name: Bootstrap vcpkg
+        run: ${{ matrix.vcpkg-bootstrap }}
+        working-directory: vcpkg
+      - name: Run vcpkg
+        run: ${{ matrix.vcpkg }} install --triplet ${{ matrix.triplet }}
+        working-directory: vcpkg
+      - name: Upload artifacts
+        if: ${{ github.ref == 'refs/heads/master' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            vcpkg/vcpkg_installed/${{ matrix.triplet }}/debug
+            vcpkg/vcpkg_installed/${{ matrix.triplet }}/include
+            vcpkg/vcpkg_installed/${{ matrix.triplet }}/lib
+            vcpkg/vcpkg_installed/${{ matrix.triplet }}/tools
+          if-no-files-found: error
+  push:
+    if: ${{ github.ref == 'refs/heads/master' }}
+    name: Push
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: repo
+      - name: Retrieve artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: "Debug: show artifacts"
+        run: ls -al artifacts/*
+      - name: Handle tools
+        run: |
+          rm -rf tools
+          mkdir -p tools
+          mv ../artifacts/*/tools/cppgraphqlgen/schemagen{,.exe} tools/
+          git add tools
+        working-directory: repo
+      - name: Handle headers
+        run: |
+          rm -rf include
+          mkdir -p include
+          mv ../artifacts/Win64/include/* include
+          git add include
+        working-directory: repo
+      - name: Handle libs
+        run: |
+          rm -rf lib
+          for rel in Linux Win64; do
+            mkdir -p "lib/${rel}"
+            mv "../artifacts/${rel}/lib"/* "lib/${rel}"
+            rm -rf "lib/${rel}/pkgconfig"
+          done
+        working-directory: repo
+      - name: Handle debug
+        run: |
+          for rel in Linux Win64; do
+            mkdir -p "debug/${rel}"
+            mv "../artifacts/${rel}/debug/lib"/* "debug/${rel}"
+            rm -rf "debug/${rel}/pkgconfig"
+          done
+        working-directory: repo
+      - name: Create release
+        id: release
+        run: |
+          RELEASE_NAME="$(date -u '+%Y.%m.%d-%H%M%S')"
+          echo "name=${RELEASE_NAME}" >> "$GITHUB_OUTPUT"
+          gh release create --draft --notes "$(git show -s --format=%s)" --target ${{ github.sha }} \
+          --title ${RELEASE_NAME} --repo ${{ github.repository }} ${RELEASE_NAME}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: repo
+      - name: Write release name to file
+        run: |
+          for lib in . debug lib tools; do
+            echo ${{ steps.release.outputs.name }} > "${lib}/.VERSION"
+          done;
+          git add .VERSION
+        working-directory: repo
+      - name: Compress
+        run: |
+          for lib in debug lib tools; do
+            zip -r "../${lib}.zip" "${lib}"
+          done
+        working-directory: repo
+      - name: Commit changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git diff-index --quiet HEAD || git commit --all --message "GHA build ${{ github.run_id }}-${{ github.run_attempt }}"
+        working-directory: repo
+      - name: Push
+        run: git push
+        working-directory: repo
+      - name: Upload to release
+        run: gh release upload ${{ steps.release.outputs.name }} --repo ${{ github.repository }} *.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
