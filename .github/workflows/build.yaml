@@ -141,7 +141,9 @@ jobs:
       - name: Compress
         run: |
           for lib in debug lib tools; do
-            zip -r "../${lib}.zip" "${lib}"
+            cd "${lib}"
+            zip -r "../../${lib}.zip" *
+            cd -
           done
         working-directory: repo
       - name: Commit changes
