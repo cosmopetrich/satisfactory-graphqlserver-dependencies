@@ -119,7 +119,7 @@ jobs:
         run: |
           for rel in Linux Win64; do
             mkdir -p "bin/${rel}"
-            mv "../artifacts/${rel}/bin/lib"/* "bin/${rel}"
+            mv "../artifacts/${rel}/bin"/* "bin/${rel}"
             rm -rf "bin/${rel}/pkgconfig"
           done
         working-directory: repo
