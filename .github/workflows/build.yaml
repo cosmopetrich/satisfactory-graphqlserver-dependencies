@@ -70,7 +70,9 @@ jobs:
       - name: Store dynamic build output
         run: |
           mkdir -p artifact
-          mv vcpkg/vcpkg_installed/${{ matrix.triplet-dynamic }}/{debug,include,lib} artifact
+          mv vcpkg/vcpkg_installed/${{ matrix.triplet-dynamic }}/debug artifact
+          mv vcpkg/vcpkg_installed/${{ matrix.triplet-dynamic }}/include artifact
+          mv vcpkg/vcpkg_installed/${{ matrix.triplet-dynamic }}/lib artifact
       - name: Store dynamic build output (bin)
         if: ${{ matrix.bin }}
         run: mv vcpkg/vcpkg_installed/${{ matrix.triplet-dynamic }}/bin artifact
@@ -106,7 +108,7 @@ jobs:
         run: |
           rm -rf tools
           mkdir -p tools
-          mv ../artifacts/*/tools/cppgraphqlgen/schemagen{,.exe} tools/
+          mv ../artifacts/*/tools/cppgraphqlgen/schemagen* tools/
         working-directory: repo
       - name: Handle headers
         run: |
