@@ -80,9 +80,7 @@ jobs:
         run: ${{ matrix.vcpkg }} install --triplet ${{ matrix.triplet-static }}
         working-directory: vcpkg
       - name: Store static build output
-        run: |
-          mkdir -p artifact
-          mv vcpkg/vcpkg_installed/${{ matrix.triplet-static }}/tools artifact
+        run: mv vcpkg/vcpkg_installed/${{ matrix.triplet-static }}/tools artifact
       - name: Upload artifacts
         if: ${{ github.ref == 'refs/heads/master' }}
         uses: actions/upload-artifact@v4
