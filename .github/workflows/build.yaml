@@ -22,16 +22,18 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        triplet: [x64-linux, x64-windows-static]
+        artifact: [Linux, Win64]
         include:
-          - triplet: x64-linux
-            artifact: Linux
+          - artifact: Linux
+            triplet-dynamic: x64-linux-dynamic
+            triplet-static: x64-linux
             os: ubuntu-latest
             vcpkg: vcpkg
             vcpkg-bootstrap: ./bootstrap-vcpkg.sh
             schemagen: schemagen
-          - triplet: x64-windows-static
-            artifact: Win64
+          - artifact: Win64
+            triplet-dynamic: x64-windows
+            triplet-static: x64-windows-static
             headers: true
             os: windows-latest
             vcpkg: vcpkg.exe
@@ -61,8 +63,11 @@ jobs:
       - name: Bootstrap vcpkg
         run: ${{ matrix.vcpkg-bootstrap }}
         working-directory: vcpkg
-      - name: Run vcpkg
-        run: ${{ matrix.vcpkg }} install --triplet ${{ matrix.triplet }}
+      - name: Run vcpkg (dynamic)
+        run: ${{ matrix.vcpkg }} install --triplet ${{ matrix.triplet-dynamic }}
+        working-directory: vcpkg
+      - name: Run vcpkg (dynamic)
+        run: ${{ matrix.vcpkg }} install --triplet ${{ matrix.triplet-static }}
         working-directory: vcpkg
       - name: Upload artifacts
         if: ${{ github.ref == 'refs/heads/master' }}
@@ -70,10 +75,11 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: |
-            vcpkg/vcpkg_installed/${{ matrix.triplet }}/debug
-            vcpkg/vcpkg_installed/${{ matrix.triplet }}/include
-            vcpkg/vcpkg_installed/${{ matrix.triplet }}/lib
-            vcpkg/vcpkg_installed/${{ matrix.triplet }}/tools
+            vcpkg/vcpkg_installed/${{ matrix.triplet-dynamic }}/bin
+            vcpkg/vcpkg_installed/${{ matrix.triplet-dynamic }}/debug
+            vcpkg/vcpkg_installed/${{ matrix.triplet-dynamic }}/include
+            vcpkg/vcpkg_installed/${{ matrix.triplet-dynamic }}/lib
+            vcpkg/vcpkg_installed/${{ matrix.triplet-static }}/tools
           if-no-files-found: error
   push:
     if: ${{ github.ref == 'refs/heads/master' }}
@@ -89,8 +95,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: "Debug: show artifacts"
-        run: ls -al artifacts/*
       - name: Handle tools
         run: |
           rm -rf tools
@@ -104,13 +108,12 @@ jobs:
           mv ../artifacts/Win64/include/* include
           git add include
         working-directory: repo
-      - name: Handle libs
+      - name: Handle bin
         run: |
-          rm -rf lib
           for rel in Linux Win64; do
-            mkdir -p "lib/${rel}"
-            mv "../artifacts/${rel}/lib"/* "lib/${rel}"
-            rm -rf "lib/${rel}/pkgconfig"
+            mkdir -p "bin/${rel}"
+            mv "../artifacts/${rel}/bin/lib"/* "bin/${rel}"
+            rm -rf "bin/${rel}/pkgconfig"
           done
         working-directory: repo
       - name: Handle debug
@@ -121,26 +124,25 @@ jobs:
             rm -rf "debug/${rel}/pkgconfig"
           done
         working-directory: repo
-      - name: Create release
-        id: release
+      - name: Handle libs
         run: |
-          RELEASE_NAME="$(date -u '+%Y.%m.%d-%H%M%S')"
-          echo "name=${RELEASE_NAME}" >> "$GITHUB_OUTPUT"
-          gh release create --draft --notes "$(git show -s --format=%s)" --target ${{ github.sha }} \
-          --title ${RELEASE_NAME} --repo ${{ github.repository }} ${RELEASE_NAME}
-        env:
-          GH_TOKEN: ${{ github.token }}
+          rm -rf lib
+          for rel in Linux Win64; do
+            mkdir -p "lib/${rel}"
+            mv "../artifacts/${rel}/lib"/* "lib/${rel}"
+            rm -rf "lib/${rel}/pkgconfig"
+          done
         working-directory: repo
       - name: Write release name to file
         run: |
-          for lib in . debug lib tools; do
+          for lib in . bin debug lib tools; do
             echo ${{ steps.release.outputs.name }} > "${lib}/.VERSION"
           done;
           git add .VERSION
         working-directory: repo
       - name: Compress
         run: |
-          for lib in debug lib tools; do
+          for lib in bin debug lib tools; do
             cd "${lib}"
             zip -r "../../${lib}.zip" * .VERSION
             cd -
@@ -154,6 +156,16 @@ jobs:
         working-directory: repo
       - name: Push
         run: git push
+        working-directory: repo
+      - name: Create release
+        id: release
+        run: |
+          RELEASE_NAME="$(date -u '+%Y.%m.%d-%H%M%S')"
+          echo "name=${RELEASE_NAME}" >> "$GITHUB_OUTPUT"
+          gh release create --draft --notes "$(git show -s --format=%s)" --target ${{ github.sha }} \
+          --title ${RELEASE_NAME} --repo ${{ github.repository }} ${RELEASE_NAME}
+        env:
+          GH_TOKEN: ${{ github.token }}
         working-directory: repo
       - name: Upload to release
         run: gh release upload ${{ steps.release.outputs.name }} --repo ${{ github.repository }} *.zip
