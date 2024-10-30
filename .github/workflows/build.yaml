@@ -116,6 +116,7 @@ jobs:
           git add include
         working-directory: repo
       - name: Handle bin
+        if: ${{ matrix.bin }}
         run: |
           for rel in Linux Win64; do
             mkdir -p "bin/${rel}"
