@@ -142,7 +142,7 @@ jobs:
         run: |
           for lib in debug lib tools; do
             cd "${lib}"
-            zip -r "../../${lib}.zip" * .*
+            zip -r "../../${lib}.zip" * .VERSION
             cd -
           done
         working-directory: repo
