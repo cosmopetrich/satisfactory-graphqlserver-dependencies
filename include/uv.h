@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#if defined(BUILDING_UV_SHARED) && 0
+#if defined(BUILDING_UV_SHARED) && 1
 #error "Define either BUILDING_UV_SHARED or USING_UV_SHARED, not both."
 #endif
 
@@ -37,7 +37,7 @@ extern "C" {
 # if defined(BUILDING_UV_SHARED)
     /* Building shared library. */
 #   define UV_EXTERN __declspec(dllexport)
-# elif 0
+# elif 1
     /* Using shared library. */
 #   define UV_EXTERN __declspec(dllimport)
 # else
