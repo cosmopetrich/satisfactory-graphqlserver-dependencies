@@ -96,7 +96,6 @@ jobs:
           rm -rf tools
           mkdir -p tools
           mv ../artifacts/*/tools/cppgraphqlgen/schemagen{,.exe} tools/
-          git add tools
         working-directory: repo
       - name: Handle headers
         run: |
