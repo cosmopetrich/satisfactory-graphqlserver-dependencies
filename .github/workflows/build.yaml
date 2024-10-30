@@ -155,6 +155,12 @@ jobs:
             cd -
           done
         working-directory: repo
+      - name: Create release info
+        id: release-info
+        run: |
+          echo "name=$(date -u '+%Y.%m.%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+          echo "notes=$(git show -s --format=%s)" >> "$GITHUB_OUTPUT"
+        working-directory: repo
       - name: Commit changes
         run: |
           git config --global user.name 'github-actions[bot]'
@@ -165,16 +171,13 @@ jobs:
         run: git push
         working-directory: repo
       - name: Create release
-        id: release
         run: |
-          RELEASE_NAME="$(date -u '+%Y.%m.%d-%H%M%S')"
-          echo "name=${RELEASE_NAME}" >> "$GITHUB_OUTPUT"
-          gh release create --draft --notes "$(git show -s --format=%s)" --target ${{ github.sha }} \
-          --title ${RELEASE_NAME} --repo ${{ github.repository }} ${RELEASE_NAME}
+          gh release create --draft --notes ${{ steps.release-info.outputs.notes }} --target ${{ github.sha }} \
+          --title ${{ steps.release-info.outputs.name }} --repo ${{ github.repository }} ${{ steps.release-info.outputs.name }}
         env:
           GH_TOKEN: ${{ github.token }}
         working-directory: repo
       - name: Upload to release
-        run: gh release upload ${{ steps.release.outputs.name }} --repo ${{ github.repository }} *.zip
+        run: gh release upload ${{ steps.release-info.outputs.name }} --repo ${{ github.repository }} *.zip
         env:
           GH_TOKEN: ${{ github.token }}
