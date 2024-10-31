@@ -35,8 +35,9 @@ jobs:
             os: windows-latest
             vcpkg: vcpkg.exe
             vcpkg-bootstrap: bootstrap-vcpkg.bat
-            vs_installer: C:/Program Files (x86)/Microsoft Visual Studio/Installer/vs_installer.exe
-            vs_path: C:/Program Files/Microsoft Visual Studio/2022/Enterprise
+            msvc-version: "14.34.17.4"
+            vs-installer: C:/Program Files (x86)/Microsoft Visual Studio/Installer/vs_installer.exe
+            vs-path: C:/Program Files/Microsoft Visual Studio/2022/Enterprise
           - dependency: cppgraphqlgen
             artifact-paths: |
               vcpkg/vcpkg_installed/*/tools/cppgraphqlgen/schemagen*
@@ -67,7 +68,8 @@ jobs:
       - name: Install VS components
         if: ${{ matrix.vs_installer && matrix.vs_path }}
         run: |
-          "${{ matrix.vs_installer }}" modify --installPath "${{ matrix.vs_path }}" --quiet --norestart --add Microsoft.VisualStudio.Component.VC.14.34.17.4.x86.x64
+          & "${{ matrix.vs-installer }}" modify --installPath "${{ matrix.vs-path }}" `
+          --quiet --norestart --add Microsoft.VisualStudio.Component.VC.${{ matrix.msvc-version }}.x86.x64
       - name: Install vcpkg.json
         run: mv "config/${{ matrix.dependency }}/vcpkg.json" vcpkg/
       - name: Configure caching
