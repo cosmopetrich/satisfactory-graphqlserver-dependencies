@@ -31,7 +31,7 @@ jobs:
             vcpkg: vcpkg
             vcpkg-bootstrap: ./bootstrap-vcpkg.sh
           - platform: Win64
-            triplet-release: x64-windows-static-md-release
+            triplet-release: x64-windows-static-md-release-ue-css
             os: windows-latest
             vcpkg: vcpkg.exe
             vcpkg-bootstrap: bootstrap-vcpkg.bat
@@ -59,7 +59,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: config
-          sparse-checkout: "${{ matrix.dependency }}/vcpkg.json"
+          sparse-checkout: |
+            ${{ matrix.dependency }}/vcpkg.json
+            .vcpkg
       - name: Install vcpkg.json
         run: mv "config/${{ matrix.dependency }}/vcpkg.json" vcpkg/
       - name: Configure caching
@@ -73,6 +75,9 @@ jobs:
         working-directory: vcpkg
       - name: Run vcpkg
         run: ${{ matrix.vcpkg }} install --triplet ${{ matrix.triplet-release }}
+        env:
+          VCPKG_OVERLAY_PORTS: ../.vcpkg/ports
+          VCPKG_OVERLAY_TRIPLETS: ../.vcpkg/triplets
         working-directory: vcpkg
       - name: Upload artifacts
         if: ${{ github.ref == 'refs/heads/master' }}
