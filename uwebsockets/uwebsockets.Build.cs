@@ -8,8 +8,8 @@
 using System.IO;
 using UnrealBuildTool;
 
-public class uWebSockets : ModuleRules {
-    public uWebSockets(ReadOnlyTargetRules Target) : base(Target) {
+public class uwebsockets : ModuleRules {
+    public uwebsockets(ReadOnlyTargetRules Target) : base(Target) {
         Type = ModuleType.External;
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
 
