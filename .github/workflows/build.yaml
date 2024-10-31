@@ -76,8 +76,8 @@ jobs:
       - name: Run vcpkg
         run: ${{ matrix.vcpkg }} install --triplet ${{ matrix.triplet-release }}
         env:
-          VCPKG_OVERLAY_PORTS: ../.vcpkg/ports
-          VCPKG_OVERLAY_TRIPLETS: ../.vcpkg/triplets
+          VCPKG_OVERLAY_PORTS: ${{ github.workspace }}/config/.vcpkg/ports
+          VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/config/.vcpkg/triplets
         working-directory: vcpkg
       - name: Upload artifacts
         if: ${{ github.ref == 'refs/heads/master' }}
