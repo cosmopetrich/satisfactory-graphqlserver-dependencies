@@ -66,9 +66,10 @@ jobs:
             .vcpkg
       - name: Install VS components
         if: ${{ matrix.vs_installer && matrix.vs_path }}
+        shell: pwsh
         run: |
-          ${{ matrix.vs_installer }} modify --installPath ${{ matrix.vs_path }} \
-          --quiet --norestart \
+          ${{ matrix.vs_installer }} modify --installPath ${{ matrix.vs_path }} `
+          --quiet --norestart `
           --add Microsoft.VisualStudio.Component.VC.14.34.17.4.x86.x64
       - name: Install vcpkg.json
         run: mv "config/${{ matrix.dependency }}/vcpkg.json" vcpkg/
