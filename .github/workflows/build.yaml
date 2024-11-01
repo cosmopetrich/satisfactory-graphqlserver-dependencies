@@ -23,7 +23,7 @@ jobs:
       fail-fast: true
       matrix:
         platform: [Linux, Win64]
-        dependency: [cppgraphqlgen, uwebsockets]
+        dependency: [cppgraphqlgen, schemagen, uwebsockets]
         include:
           - platform: Linux
             triplet-release: x64-linux-release
@@ -40,11 +40,14 @@ jobs:
             vs-path: C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise
           - dependency: cppgraphqlgen
             artifact-paths: |
-              vcpkg/vcpkg_installed/*/tools/cppgraphqlgen/schemagen*
               vcpkg/vcpkg_installed/*/include/graphqlservice
               !vcpkg/vcpkg_installed/*/include/graphqlservice/GraphQLClient.h
               vcpkg/vcpkg_installed/*/lib/*graphql*
               !vcpkg/vcpkg_installed/*/lib/*graphqlclient*
+          - dependency: schemagen
+            vcpkg-file: cppgraphqlgen/schemagen-vcpkg.json
+            artifact-paths: |
+              vcpkg/vcpkg_installed/*/tools/*
           - dependency: uwebsockets
             artifact-paths: |
               vcpkg/vcpkg_installed/*/include/uwebsockets
@@ -63,7 +66,7 @@ jobs:
         with:
           path: config
           sparse-checkout: |
-            ${{ matrix.dependency }}/vcpkg.json
+            ${{ matrix.dependency }}/*vcpkg.json
             .vcpkg
       - name: Show available MSVC toolchains pre-install
         if: ${{ matrix.msvc-version }}
@@ -81,7 +84,7 @@ jobs:
         run: |
           ls "${{ matrix.vs-path }}/VC/Tools/MSVC"
       - name: Install vcpkg.json
-        run: mv "config/${{ matrix.dependency }}/vcpkg.json" vcpkg/
+        run: mv ${{ matrix.vcpkg-file || "config/${{ matrix.dependency }}/vcpkg.json" }} vcpkg/
       - name: Configure caching
         uses: actions/github-script@v7
         with:
@@ -135,7 +138,8 @@ jobs:
       - name: Create tools archive
         run: |
           mkdir -p release/tools
-          mv artifacts/*/*/tools/*/* release/tools/
+          mv artifacts/schemagen-*/*/tools/*/* release/tools/
+          rm -rf artifacts/schemagen-*
           echo ${{ steps.release-info.outputs.name }} > release/tools/.VERSION
           cd release/tools
           zip -r "../tools.zip" * .VERSION
