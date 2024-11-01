@@ -44,10 +44,6 @@ jobs:
               !vcpkg/vcpkg_installed/*/include/graphqlservice/GraphQLClient.h
               vcpkg/vcpkg_installed/*/lib/*graphql*
               !vcpkg/vcpkg_installed/*/lib/*graphqlclient*
-          - dependency: schemagen
-            vcpkg-file: cppgraphqlgen/schemagen-vcpkg.json
-            artifact-paths: |
-              vcpkg/vcpkg_installed/*/tools/*
           - dependency: uwebsockets
             artifact-paths: |
               vcpkg/vcpkg_installed/*/include/uwebsockets
@@ -66,7 +62,7 @@ jobs:
         with:
           path: config
           sparse-checkout: |
-            ${{ matrix.dependency }}/*vcpkg.json
+            ${{ matrix.dependency }}/vcpkg.json
             .vcpkg
       - name: Show available MSVC toolchains pre-install
         if: ${{ matrix.msvc-version }}
@@ -83,11 +79,7 @@ jobs:
         if: ${{ matrix.msvc-version }}
         run: |
           ls "${{ matrix.vs-path }}/VC/Tools/MSVC"
-      - name: Install custom vcpkg.json
-        if: ${{ matrix.vcpkg-file  }}
-        run: config/${{ matrix.vcpkg-file }} vcpkg/vcpkg.json
       - name: Install vcpkg.json
-        if: ${{ !matrix.vcpkg-file  }}
         run: config/${{ matrix.dependency }}/vcpkg.json vcpkg/vcpkg.json
       - name: Configure caching
         uses: actions/github-script@v7
