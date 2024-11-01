@@ -37,7 +37,7 @@ jobs:
             vcpkg-bootstrap: bootstrap-vcpkg.bat
             msvc-version: "14.34.17.4"
             vs-installer: C:/Program Files (x86)/Microsoft Visual Studio/Installer/vs_installer.exe
-            vs-path: C:/Program Files/Microsoft Visual Studio/2022/Enterprise
+            vs-path: C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise
           - dependency: cppgraphqlgen
             artifact-paths: |
               vcpkg/vcpkg_installed/*/tools/cppgraphqlgen/schemagen*
