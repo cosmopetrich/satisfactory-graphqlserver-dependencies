@@ -35,7 +35,7 @@ jobs:
             os: windows-latest
             vcpkg: vcpkg.exe
             vcpkg-bootstrap: bootstrap-vcpkg.bat
-            msvc-version: "14.34.17.4"
+            msvc-version: "14.36.17.6"
             vs-installer: C:/Program Files (x86)/Microsoft Visual Studio/Installer/vs_installer.exe
             vs-path: C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise
           - dependency: cppgraphqlgen
