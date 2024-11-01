@@ -83,8 +83,12 @@ jobs:
         if: ${{ matrix.msvc-version }}
         run: |
           ls "${{ matrix.vs-path }}/VC/Tools/MSVC"
+      - name: Install custom vcpkg.json
+        if: ${{ matrix.vcpkg-file  }}
+        run: config/${{ matrix.vcpkg-file }} vcpkg/vcpkg.json
       - name: Install vcpkg.json
-        run: mv ${{ matrix.vcpkg-file || config/${{ matrix.dependency }}/vcpkg.json }} vcpkg/
+        if: ${{ !matrix.vcpkg-file  }}
+        run: config/${{ matrix.dependency }}/vcpkg.json vcpkg/vcpkg.json
       - name: Configure caching
         uses: actions/github-script@v7
         with:
