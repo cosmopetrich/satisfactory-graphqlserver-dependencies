@@ -42,17 +42,19 @@ vcpkg_cmake_install()
 
 vcpkg_cmake_config_fixup()
 
-vcpkg_list(SET tool_names)
+vcpkg_list(SET TOOL_NAMES)
 if (GRAPHQL_BUILD_CLIENTGEN)
-	vcpkg_list(APPEND tool_names clientgen)
+	vcpkg_list(APPEND TOOL_NAMES clientgen)
 endif()
 if (GRAPHQL_BUILD_SCHEMAGEN)
-	vcpkg_list(APPEND tool_names schemagen)
+	vcpkg_list(APPEND TOOL_NAMES schemagen)
 endif()
 
-vcpkg_copy_tools(
-    TOOL_NAMES ${tool_names}
-    SEARCH_DIR ${CURRENT_PACKAGES_DIR}/tools/cppgraphqlgen)
+if(TOOL_NAMES)
+	vcpkg_copy_tools(
+	    TOOL_NAMES ${TOOL_NAMES}
+	    SEARCH_DIR ${CURRENT_PACKAGES_DIR}/tools/cppgraphqlgen)
+endif()
 
 vcpkg_copy_pdbs()
 
