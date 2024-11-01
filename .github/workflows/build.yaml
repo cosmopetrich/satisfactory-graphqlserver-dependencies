@@ -97,6 +97,15 @@ jobs:
           VCPKG_OVERLAY_PORTS: ${{ github.workspace }}/config/.vcpkg/ports
           VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/config/.vcpkg/triplets
         working-directory: vcpkg
+      - name: Determine failing builtree
+        run: echo "buildtree='$(ls -t | head -n1)'" >> "$GITHUB_OUTPUT" 
+        working-directory: vcpkg/buildtrees
+      - name: Upload vcpkg logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: vcpkg-logs
+          path: vcpkg/buildtrees/*/*.log
       - name: Upload artifacts
         if: ${{ github.ref == 'refs/heads/master' }}
         uses: actions/upload-artifact@v4
