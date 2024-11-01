@@ -68,7 +68,7 @@ jobs:
       - run: |
           ls "${{ matrix.vs-path }}/VC/Tools/MSVC"
         if: ${{ matrix.msvc-version }}
-      - run: ls ${{ runner.temp }}
+      - run: ls $TEMP || true
         shell: bash
       - name: Install VS components
         if: ${{ matrix.msvc-version }}
