@@ -131,14 +131,6 @@ jobs:
           echo "name=$(date -u '+%Y.%m.%d-%H%M%S')" >> "$GITHUB_OUTPUT"
           echo "notes=$(git show -s --format=%s)" >> "$GITHUB_OUTPUT"
         working-directory: repo
-      - name: Create tools archive
-        run: |
-          mkdir -p release/tools
-          mv artifacts/schemagen-*/*/tools/*/* release/tools/
-          rm -rf artifacts/schemagen-*
-          echo ${{ steps.release-info.outputs.name }} > release/tools/.VERSION
-          cd release/tools
-          zip -r "../tools.zip" * .VERSION
       - name: Add headers to git
         run: |
           for depPkg in */vcpkg.json; do
