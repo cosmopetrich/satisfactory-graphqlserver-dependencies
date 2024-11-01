@@ -17,7 +17,9 @@ vcpkg_from_github(
 vcpkg_check_features(
     OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     FEATURES
+        clientgen   GRAPHQL_BUILD_CLIENTGEN
         rapidjson   GRAPHQL_USE_RAPIDJSON
+        schemagen   GRAPHQL_BUILD_SCHEMAGEN
 )
 
 vcpkg_cmake_configure(
@@ -40,8 +42,16 @@ vcpkg_cmake_install()
 
 vcpkg_cmake_config_fixup()
 
+vcpkg_list(SET tool_names)
+if (GRAPHQL_BUILD_CLIENTGEN)
+	vcpkg_list(APPEND tool_names clientgen)
+endif()
+if (GRAPHQL_BUILD_SCHEMAGEN)
+	vcpkg_list(APPEND tool_names schemagen)
+endif()
+
 vcpkg_copy_tools(
-    TOOL_NAMES schemagen clientgen
+    TOOL_NAMES ${tool_names}
     SEARCH_DIR ${CURRENT_PACKAGES_DIR}/tools/cppgraphqlgen)
 
 vcpkg_copy_pdbs()
