@@ -68,23 +68,13 @@ jobs:
       - run: |
           ls "${{ matrix.vs-path }}/VC/Tools/MSVC"
         if: ${{ matrix.msvc-version }}
-      - run: |
-          ls "C:/Program Files/Microsoft Visual Studio/2022"
-          ls "C:/Program Files/Microsoft Visual Studio/2022/Enterprise"
-        shell: bash
-        if: ${{ matrix.msvc-version }}
       - name: Install VS components
         if: ${{ matrix.msvc-version }}
         run: |
           "${{ matrix.vs-installer }}" modify --installPath "${{ matrix.vs-path }}" --quiet --norestart \
           --add Microsoft.VisualStudio.Component.VC.${{ matrix.msvc-version }}.x86.x64 \
-          && cat $TEMP/dd_installer_*.log || cat $TEMP/dd_installer_*.log; false
+          && cat $TEMP/dd_installer_*.log || (cat $TEMP/dd_installer_*.log; false)
         shell: bash
-      - run: |
-          ls "${{ matrix.vs-path }}/VC/Tools/MSVC"
-        if: ${{ matrix.msvc-version }}
-      - run: sleep 300
-        if: ${{ matrix.msvc-version }}
       - run: |
           ls "${{ matrix.vs-path }}/VC/Tools/MSVC"
         if: ${{ matrix.msvc-version }}
