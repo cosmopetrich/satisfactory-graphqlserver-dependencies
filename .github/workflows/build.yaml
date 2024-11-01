@@ -23,7 +23,7 @@ jobs:
       fail-fast: true
       matrix:
         platform: [Linux, Win64]
-        dependency: [cppgraphqlgen, schemagen, uwebsockets]
+        dependency: [cppgraphqlgen, uwebsockets]
         include:
           - platform: Linux
             triplet-release: x64-linux-release
