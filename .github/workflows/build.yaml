@@ -31,7 +31,7 @@ jobs:
             vcpkg: vcpkg
             vcpkg-bootstrap: ./bootstrap-vcpkg.sh
           - platform: Win64
-            triplet-release: x64-windows-static-md-release-ue-css
+            triplet-release: x64-windows-static-md-release
             os: windows-latest
             vcpkg: vcpkg.exe
             vcpkg-bootstrap: bootstrap-vcpkg.bat
