@@ -65,6 +65,10 @@ jobs:
           sparse-checkout: |
             ${{ matrix.dependency }}/vcpkg.json
             .vcpkg
+      - name: Show available MSVC toolchains pre-install
+        if: ${{ matrix.msvc-version }}
+        run: |
+          ls "${{ matrix.vs-path }}/VC/Tools/MSVC"
       - name: Install VS components
         if: ${{ matrix.msvc-version }}
         run: |
@@ -72,7 +76,7 @@ jobs:
           --add Microsoft.VisualStudio.Component.VC.${{ matrix.msvc-version }}.x86.x64 \
           && cat $TEMP/dd_installer_*.log || (cat $TEMP/dd_installer_*.log; false)
         shell: bash
-      - name: Show available MSVC toolchains
+      - name: Show available MSVC toolchains post-install
         if: ${{ matrix.msvc-version }}
         run: |
           ls "${{ matrix.vs-path }}/VC/Tools/MSVC"
